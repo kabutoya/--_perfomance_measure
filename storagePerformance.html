@@ -1,0 +1,185 @@
+<html>
+<head>
+<style type="text/css">
+	table { 
+		width: 400px;
+		border-collapse: collapse;
+		border: 1px #696969 solid;
+	} 
+	table td { 
+		border: 1px #696969 solid;
+	} 
+</style>
+
+
+<script type="text/javascript">
+var idb = null;
+var _KEY_PREFIX = "ThisIsKeyPrefix";
+var _VALUE_PREFIX = "ThisIsValuePrefix";
+function init() {
+	var userAgent = navigator.appName;
+	document.getElementById("userAgent").innerText = userAgent;
+	getIDB_();
+}
+
+function calcPerform() {
+	var count = document.calc.count.value;
+	
+	// ローカルストレージに書き込み
+	perfFunc_(count, localStorage, "localStorage");
+
+	// セッションストレージに書き込み
+	perfFunc_(count, sessionStorage, "sessionStorage");
+
+	// IDBに書き込み
+	if(!idb) return;
+	perfFunc_IDB(count, "IndexdDB");
+}
+
+var idbProp = {
+	name : 'idbSample',
+	storeName : 'keyStore'
+};
+
+function getIDB_() {
+	if (window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB) {
+		window.indexedDB = window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB;
+		window.IDBTransaction = window.IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction || window.mozIDBTransaction;
+		window.IDBKeyRange = window.IDBKeyRange || window.webkitIDBKeyRange || window.mozIDBKeyRange;
+		window.IDBCursor = window.IDBCursor || window.webkitIDBCursor;
+	} else {
+		return;
+	}
+	/* IndexedDBをオープンします。*/
+	var request = window.indexedDB.open(idbProp.name);
+	
+	request.onupgradeneeded =
+		function(e) {
+			idb = this.result;
+			if(!idb.objectStoreNames.contains(idbProp.storeName))
+				idb.createObjectStore(idbProp.storeName, { keyPath: 'sKey', autoIncrement: false });
+			alert("idb is already");
+		};
+	request.onsuccess =
+		function(e) {
+			idb = this.result;
+			if(!idb.objectStoreNames.contains(idbProp.storeName))
+				idb.createObjectStore(idbProp.storeName, { keyPath: 'sKey', autoIncrement: false });
+			alert("idb is already");
+		}
+}
+
+function perfFunc_(count, storage, storageType) {
+	storage.clear();
+	var KEY_PREFIX = _KEY_PREFIX + storageType + "_";
+	var VALUE_PREFIX = _VALUE_PREFIX + storageType + "_";
+	document.getElementById(storageType + "_count").innerText = count;
+
+	// 書き込みの処理時間計測
+	var startTime = (new Date()).getTime();
+	for (var i = 0; i < count; i++) {
+		storage.setItem(KEY_PREFIX + i, VALUE_PREFIX + i);
+	}
+	var endTime = (new Date()).getTime();
+	var pefTime = endTime - startTime;
+	document.getElementById(storageType + "_w").innerText = pefTime;
+	// 読み取りの処理時間計測
+	startTime = (new Date()).getTime();
+	for (var j = 0; j < count; j++) {
+		var data = storage.getItem(KEY_PREFIX + j);
+	}
+	endTime = (new Date()).getTime();
+	pefTime = endTime - startTime;
+	document.getElementById(storageType + "_r").innerText = pefTime;
+	storage.clear();
+};
+
+var perfFunc_IDB = function(count, storageType) {
+	document.getElementById(storageType + "_count").innerText = count;
+
+	// 書き込みの処理時間計測
+	var store = getStore_();
+	var startTime = (new Date()).getTime();
+	for (var i = 0; i < count; i++) {
+		(function(j) {
+			var data = {
+				sKey : _KEY_PREFIX + j,
+				data : _VALUE_PREFIX + j
+			}
+			store.put(data);
+		})(i);
+	}
+	var endTime = (new Date()).getTime();
+	var pefTime = endTime - startTime
+	document.getElementById(storageType + "_w").innerText = pefTime;
+	// 読み取りの処理時間計測
+	startTime = (new Date()).getTime();
+	for (var j = 0; j < count; j++) {
+		var req = store.get(_KEY_PREFIX + i);
+	}
+	endTime = (new Date()).getTime();
+	pefTime = endTime - startTime;
+	document.getElementById(storageType + "_r").innerText = pefTime;
+	clearStore_(count);
+};
+
+function getStore_() {
+	var transaction = idb.transaction(idbProp.storeName, "readwrite");
+	//IDBTransactionがfunctionと認識されてREAD_WRITEプロパティが取れない。そのため、'readwrite'を直書き。
+	//var transaction = idb.transaction(idbProp.storeName, window.IDBTransaction.READ_WRITE);
+	var store = transaction.objectStore(idbProp.storeName);
+	return store
+}
+
+function clearStore_(count) {
+	var store = getStore_();
+	for (var i = 0; i < count; i++) {
+		key = _KEY_PREFIX + i;
+		store.delete(key);
+	}
+}
+
+</script>
+</head>
+<body onload="init()">
+	<form name="calc">
+		<input type='text' name='count' value='5' />
+		<input type='button' name='calc' value='calc' onclick='calcPerform()' />
+	</form>
+	<table border="1" cellspacing="0">
+		<thead>
+			<tr>
+			<th bgcolor="#afeeee" width="100">Sotrage</th>
+			<th bgcolor="#afeeee" width="50">repeat count</th>
+			<th bgcolor="#afeeee" width="100">write time(milisec)</th>
+			<th bgcolor="#afeeee" width="100">read time(milisec)</th>
+			</tr>
+		</thead>
+		<tbody>
+		<tr>
+			<td>Local Sotrage</td>
+			<td><span id="localStorage_count" /></td>
+			<td><span id="localStorage_w" /></td>
+			<td><span id="localStorage_r" /></td>
+		</tr>
+		<tr>
+			<td>Session Sotrage</td>
+			<td><span id="sessionStorage_count" /></td>
+			<td><span id="sessionStorage_w" /></td>
+			<td><span id="sessionStorage_r" /></td>
+		</tr>
+		<tr>
+			<td>Indexd DB</td>
+			<td><span id="IndexdDB_count" /></td>
+			<td><span id="IndexdDB_w" /></td>
+			<td><span id="IndexdDB_r" /></td>
+		</tr>
+		</tbody>
+		<tfoot>
+			<tr>
+			<td colspan="4" bgcolor="#CCCCCC" align="right">User Agent : <span id="userAgent" /></td>
+			</tr>
+		</tfoot>
+	</table>
+</body>
+</html>
