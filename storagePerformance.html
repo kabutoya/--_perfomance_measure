@@ -139,6 +139,24 @@ function clearStore_(count) {
 	}
 }
 
+// ストレージの容量をチェックする関数。
+function getLocalStorageSize() {
+	var localLen = localStorage.length;
+	var size = 0;
+	var mb = 1024*1024;
+	for(var i=0; i<localLen; i++) {
+		size += bytesLen(localStorage.key(i));
+	}
+	var sizee = size+" byte\r\n"+(size/mb)+" MB";
+	//alert(sizee);
+	console.log(sizee);
+
+	function bytesLen(str) {
+	    return(encodeURIComponent(str).replace(/%../g,"x").length);
+	}
+}
+
+
 </script>
 </head>
 <body onload="init()">
